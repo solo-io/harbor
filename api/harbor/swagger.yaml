@@ -714,6 +714,11 @@ paths:
           required: true
           schema:
             $ref: '#/definitions/User'
+        - name: with_project
+          in: query
+          type: boolean
+          required: false
+          description: Bool value indicating whether a project with the same name should be created.
       tags:
         - Products
       responses:

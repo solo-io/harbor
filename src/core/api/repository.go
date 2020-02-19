@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/goharbor/harbor/src/common"
@@ -48,6 +49,7 @@ import (
 	"github.com/goharbor/harbor/src/replication"
 	"github.com/goharbor/harbor/src/replication/event"
 	"github.com/goharbor/harbor/src/replication/model"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // RepositoryAPI handles request to /api/repositories /api/repositories/tags /api/repositories/manifests, the parm has to be put
@@ -752,7 +754,7 @@ func getTagDetail(client *registry.Repository, tag string) (*models.TagDetail, e
 		Name: tag,
 	}
 
-	digest, mediaType, payload, err := client.PullManifest(tag, []string{schema2.MediaTypeManifest})
+	digest, mediaType, payload, err := client.PullManifest(tag, []string{schema2.MediaTypeManifest, ocispec.MediaTypeImageManifest})
 	if err != nil {
 		return detail, err
 	}
@@ -776,31 +778,39 @@ func getTagDetail(client *registry.Repository, tag string) (*models.TagDetail, e
 	// and return directly
 	// this impacts that some detail information(os, arch, ...) of old images
 	// cannot be got
-	if mediaType != schema2.MediaTypeManifest {
+	switch mediaType {
+	case schema2.MediaTypeManifest:
+		v2Manifest, ok := manifest.(*schema2.DeserializedManifest)
+		if !ok {
+			log.Debug("the manifest cannot be convert to DeserializedManifest, skip")
+			return detail, nil
+		}
+
+		_, reader, err := client.PullBlob(v2Manifest.Target().Digest.String())
+		if err != nil {
+			return detail, err
+		}
+
+		configData, err := ioutil.ReadAll(reader)
+		if err != nil {
+			return detail, err
+		}
+
+		if err = json.Unmarshal(configData, detail); err != nil {
+			return detail, err
+		}
+
+		populateAuthor(detail)
+	case ocispec.MediaTypeImageManifest:
+		ociManifest, ok := manifest.(*ocischema.DeserializedManifest)
+		if !ok {
+			log.Debug("the manifest cannot be convert to DeserializedManifest, skip")
+			return detail, nil
+		}
+		detail.Annotations = ociManifest.Annotations
+	default:
 		log.Debugf("the media type of the manifest is %s, not v2, skip", mediaType)
-		return detail, nil
 	}
-	v2Manifest, ok := manifest.(*schema2.DeserializedManifest)
-	if !ok {
-		log.Debug("the manifest cannot be convert to DeserializedManifest, skip")
-		return detail, nil
-	}
-
-	_, reader, err := client.PullBlob(v2Manifest.Target().Digest.String())
-	if err != nil {
-		return detail, err
-	}
-
-	configData, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return detail, err
-	}
-
-	if err = json.Unmarshal(configData, detail); err != nil {
-		return detail, err
-	}
-
-	populateAuthor(detail)
 
 	return detail, nil
 }

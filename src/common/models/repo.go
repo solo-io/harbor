@@ -63,17 +63,18 @@ type TagResp struct {
 
 // TagDetail ...
 type TagDetail struct {
-	Digest        string    `json:"digest"`
-	Name          string    `json:"name"`
-	Size          int64     `json:"size"`
-	Architecture  string    `json:"architecture"`
-	OS            string    `json:"os"`
-	OSVersion     string    `json:"os.version"`
-	DockerVersion string    `json:"docker_version"`
-	Author        string    `json:"author"`
-	Created       time.Time `json:"created"`
-	Config        *TagCfg   `json:"config"`
-	Immutable     bool      `json:"immutable"`
+	Digest        string            `json:"digest"`
+	Name          string            `json:"name"`
+	Size          int64             `json:"size"`
+	Architecture  string            `json:"architecture"`
+	OS            string            `json:"os"`
+	OSVersion     string            `json:"os.version"`
+	DockerVersion string            `json:"docker_version"`
+	Author        string            `json:"author"`
+	Created       time.Time         `json:"created"`
+	Config        *TagCfg           `json:"config"`
+	Immutable     bool              `json:"immutable"`
+	Annotations   map[string]string `json:"annotations"`
 }
 
 // TagCfg ...

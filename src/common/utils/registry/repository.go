@@ -28,6 +28,8 @@ import (
 
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+
 	commonhttp "github.com/goharbor/harbor/src/common/http"
 	"github.com/goharbor/harbor/src/common/utils"
 )
@@ -123,6 +125,7 @@ func (r *Repository) ManifestExist(reference string) (digest string, exist bool,
 
 	req.Header.Add(http.CanonicalHeaderKey("Accept"), schema1.MediaTypeManifest)
 	req.Header.Add(http.CanonicalHeaderKey("Accept"), schema2.MediaTypeManifest)
+	req.Header.Add(http.CanonicalHeaderKey("Accept"), ocispec.MediaTypeImageManifest)
 
 	resp, err := r.client.Do(req)
 	if err != nil {

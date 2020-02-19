@@ -44,7 +44,7 @@ type NotificationHandler struct {
 	notifications.BaseHandler
 }
 
-const manifestPattern = `^application/vnd.docker.distribution.manifest.v\d\+(json|prettyjws)`
+const manifestPattern = `^application/vnd.(docker.distribution|oci.image).manifest.v\d\+(json|prettyjws)`
 
 // Post handles POST request, and records audit log or refreshes cache based on event.
 func (n *NotificationHandler) Post() {

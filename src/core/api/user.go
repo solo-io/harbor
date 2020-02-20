@@ -17,7 +17,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	"github.com/goharbor/harbor/src/core/filter"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -30,6 +29,7 @@ import (
 	"github.com/goharbor/harbor/src/common/utils"
 	"github.com/goharbor/harbor/src/common/utils/log"
 	"github.com/goharbor/harbor/src/core/config"
+	"github.com/goharbor/harbor/src/core/filter"
 )
 
 // UserAPI handles request to /api/users/{}
@@ -336,6 +336,12 @@ func (ua *UserAPI) Post() {
 		return
 	}
 
+	withProject, err := ua.GetBool("with_project")
+	if err != nil {
+		log.Warningf("Failed to parse with_project query string, assuming false: %v", err)
+		withProject = false
+	}
+
 	if !ua.IsAdmin && user.HasAdminRole {
 		msg := "Non-admin cannot create an admin user."
 		log.Errorf(msg)
@@ -365,12 +371,38 @@ func (ua *UserAPI) Post() {
 		ua.SendConflictError(errors.New("email has already been used"))
 		return
 	}
+	if withProject {
+		projectExist, err := ua.ProjectMgr.Exists(user.Username)
+		if err != nil {
+			log.Errorf("Error occurred in Exists: %v", err)
+			ua.SendInternalServerError(errors.New("internal error"))
+			return
+		}
+		if projectExist {
+			log.Warning("project name has already been used!")
+			ua.SendConflictError(errors.New("project name has already been used"))
+			return
+		}
+	}
 
 	userID, err := dao.Register(user)
 	if err != nil {
 		log.Errorf("Error occurred in Register: %v", err)
 		ua.SendInternalServerError(errors.New("internal error"))
 		return
+	}
+
+	if withProject {
+		_, err = ua.ProjectMgr.Create(&models.Project{
+			OwnerID:      int(userID),
+			Name:         user.Username,
+			Metadata:     map[string]string{"public": "true"},
+			CVEWhitelist: models.CVEWhitelist{},
+		})
+		if err != nil {
+			log.Errorf("Error occurred in Create Project: %v", err)
+			return
+		}
 	}
 
 	ua.Redirect(http.StatusCreated, strconv.FormatInt(userID, 10))

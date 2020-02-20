@@ -390,6 +390,21 @@ func (p *ProjectAPI) List() {
 		},
 	}
 
+	if p.SecurityCtx.IsAuthenticated() {
+		isMember := p.GetString("is_member")
+		if len(isMember) > 0 {
+			mem, err := strconv.ParseBool(isMember)
+			if err != nil {
+				p.SendBadRequestError(fmt.Errorf("invalid is_member: %s", isMember))
+				return
+			}
+
+			if mem {
+				query.Member = &models.MemberQuery{Name: p.SecurityCtx.GetUsername()}
+			}
+		}
+	}
+
 	public := p.GetString("public")
 	if len(public) > 0 {
 		pub, err := strconv.ParseBool(public)

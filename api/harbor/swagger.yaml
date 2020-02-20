@@ -75,6 +75,12 @@ paths:
           description: The name of project owner.
           required: false
           type: string
+        - name: is_member
+          in: query
+          description: The caller is a member of the project.
+          required: false
+          type: boolean
+          format: int32
         - name: page
           in: query
           type: integer
@@ -714,6 +720,11 @@ paths:
           required: true
           schema:
             $ref: '#/definitions/User'
+        - name: with_project
+          in: query
+          type: boolean
+          required: false
+          description: Bool value indicating whether a project with the same name should be created.
       tags:
         - Products
       responses:

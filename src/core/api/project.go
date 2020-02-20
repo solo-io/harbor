@@ -406,6 +406,7 @@ func (p *ProjectAPI) List() {
 
 	if isMember && !p.SecurityCtx.IsAuthenticated() {
 		p.SendUnAuthorizedError(fmt.Errorf("unauthenticated user cannot query for member projects"))
+		return
 	}
 
 	public := p.GetString("public")

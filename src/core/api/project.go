@@ -390,16 +390,17 @@ func (p *ProjectAPI) List() {
 		},
 	}
 
+	var isMember bool
 	if p.SecurityCtx.IsAuthenticated() {
-		isMember := p.GetString("is_member")
-		if len(isMember) > 0 {
-			mem, err := strconv.ParseBool(isMember)
+		mem := p.GetString("is_member")
+		if len(mem) > 0 {
+			isMember, err := strconv.ParseBool(mem)
 			if err != nil {
-				p.SendBadRequestError(fmt.Errorf("invalid is_member: %s", isMember))
+				p.SendBadRequestError(fmt.Errorf("invalid is_member: %s", mem))
 				return
 			}
 
-			if mem {
+			if isMember {
 				query.Member = &models.MemberQuery{Name: p.SecurityCtx.GetUsername()}
 			}
 		}
@@ -432,12 +433,16 @@ func (p *ProjectAPI) List() {
 				projects = []*models.Project{}
 				// login, but not system admin or solution user, get public projects and
 				// projects that the user is member of
-				pros, err := p.ProjectMgr.GetPublic()
-				if err != nil {
-					p.SendInternalServerError(fmt.Errorf("failed to get public projects: %v", err))
-					return
+
+				if !isMember {
+					// Only include public projects if the user didn't specify member only
+					pros, err := p.ProjectMgr.GetPublic()
+					if err != nil {
+						p.SendInternalServerError(fmt.Errorf("failed to get public projects: %v", err))
+						return
+					}
+					projects = append(projects, pros...)
 				}
-				projects = append(projects, pros...)
 				mps, err := p.SecurityCtx.GetMyProjects()
 				if err != nil {
 					p.SendInternalServerError(fmt.Errorf("failed to list projects: %v", err))

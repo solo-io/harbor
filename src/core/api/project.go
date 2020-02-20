@@ -391,19 +391,21 @@ func (p *ProjectAPI) List() {
 	}
 
 	var isMember bool
-	if p.SecurityCtx.IsAuthenticated() {
-		mem := p.GetString("is_member")
-		if len(mem) > 0 {
-			isMember, err := strconv.ParseBool(mem)
-			if err != nil {
-				p.SendBadRequestError(fmt.Errorf("invalid is_member: %s", mem))
-				return
-			}
-
-			if isMember {
-				query.Member = &models.MemberQuery{Name: p.SecurityCtx.GetUsername()}
-			}
+	mem := p.GetString("is_member")
+	if len(mem) > 0 {
+		isMember, err = strconv.ParseBool(mem)
+		if err != nil {
+			p.SendBadRequestError(fmt.Errorf("invalid is_member: %s", mem))
+			return
 		}
+
+		if isMember {
+			query.Member = &models.MemberQuery{Name: p.SecurityCtx.GetUsername()}
+		}
+	}
+
+	if isMember && !p.SecurityCtx.IsAuthenticated() {
+		p.SendUnAuthorizedError(fmt.Errorf("unauthenticated user cannot query for member projects"))
 	}
 
 	public := p.GetString("public")

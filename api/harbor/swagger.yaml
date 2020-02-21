@@ -5499,6 +5499,9 @@ definitions:
       created:
         type: string
         description: The build time of the image.
+      push_time:
+        type: string
+        description: The push time of the image.
       signature:
         type: object
         description: 'The signature of image, defined by RepoSignature. If it is null, the image is unsigned.'

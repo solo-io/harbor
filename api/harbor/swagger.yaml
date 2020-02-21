@@ -5510,6 +5510,11 @@ definitions:
         description: The label list.
         items:
           $ref: '#/definitions/Label'
+      annotations:
+        type: object
+        description: Image annotations.
+        additionalProperties:
+          type: string
   ComponentOverviewEntry:
     type: object
     properties:

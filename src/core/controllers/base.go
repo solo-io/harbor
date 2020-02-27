@@ -221,7 +221,7 @@ func (cc *CommonController) SendResetEmail() {
 		settings.Insecure,
 		settings.From,
 		[]string{email},
-		"Reset Harbor user password",
+		"Reset WebAssembly Hub user password",
 		message.String())
 	if err != nil {
 		log.Errorf("Send email failed: %v", err)

@@ -93,8 +93,8 @@ type manifestResp struct {
 
 // Get ...
 func (ra *RepositoryAPI) Get() {
-	projectID, err := ra.GetInt64("project_id")
-	if err != nil || projectID <= 0 {
+	projectID, err := ra.GetInt64("project_id", 0)
+	if err != nil || projectID < 0 {
 		ra.SendBadRequestError(fmt.Errorf("invalid project_id %s", ra.GetString("project_id")))
 		return
 	}
@@ -105,24 +105,36 @@ func (ra *RepositoryAPI) Get() {
 		return
 	}
 
-	exist, err := ra.ProjectMgr.Exists(projectID)
-	if err != nil {
-		ra.ParseAndHandleError(fmt.Sprintf("failed to check the existence of project %d",
-			projectID), err)
-		return
-	}
+	var projectIds []int64
+	if projectID > 0 {
+		exist, err := ra.ProjectMgr.Exists(projectID)
+		if err != nil {
+			ra.ParseAndHandleError(fmt.Sprintf("failed to check the existence of project %d",
+				projectID), err)
+			return
+		}
 
-	if !exist {
-		ra.SendNotFoundError(fmt.Errorf("project %d not found", projectID))
-		return
-	}
+		if !exist {
+			ra.SendNotFoundError(fmt.Errorf("project %d not found", projectID))
+			return
+		}
 
-	if !ra.RequireProjectAccess(projectID, rbac.ActionList, rbac.ResourceRepository) {
-		return
+		if !ra.RequireProjectAccess(projectID, rbac.ActionList, rbac.ResourceRepository) {
+			return
+		}
+		projectIds = append(projectIds, projectID)
+	} else {
+		projects, err := ra.getMyProjects()
+		if err != nil {
+			return
+		}
+		for _, project := range projects {
+			projectIds = append(projectIds, project.ProjectID)
+		}
 	}
 
 	query := &models.RepositoryQuery{
-		ProjectIDs: []int64{projectID},
+		ProjectIDs: projectIds,
 		Name:       ra.GetString("q"),
 		LabelID:    labelID,
 	}
@@ -150,6 +162,48 @@ func (ra *RepositoryAPI) Get() {
 	ra.SetPaginationHeader(total, query.Page, query.Size)
 	ra.Data["json"] = repositories
 	ra.ServeJSON()
+}
+
+func (ra *RepositoryAPI) getMyProjects() ([]*models.Project, error) {
+	isAuthenticated := ra.SecurityCtx.IsAuthenticated()
+	isSysAdmin := ra.SecurityCtx.IsSysAdmin()
+
+	var projects []*models.Project
+	var err error
+
+	if isSysAdmin {
+		result, err := ra.ProjectMgr.List(nil)
+		if err != nil {
+			ra.ParseAndHandleError("failed to get projects", err)
+			return nil, err
+		}
+		projects = result.Projects
+	} else {
+		projects, err = ra.ProjectMgr.GetPublic()
+		if err != nil {
+			ra.ParseAndHandleError("failed to get projects", err)
+			return nil, err
+		}
+		if isAuthenticated {
+			mys, err := ra.SecurityCtx.GetMyProjects()
+			if err != nil {
+				ra.SendInternalServerError(fmt.Errorf(
+					"failed to get projects: %v", err))
+				return nil, err
+			}
+			exist := map[int64]bool{}
+			for _, p := range projects {
+				exist[p.ProjectID] = true
+			}
+
+			for _, p := range mys {
+				if !exist[p.ProjectID] {
+					projects = append(projects, p)
+				}
+			}
+		}
+	}
+	return projects, nil
 }
 
 func getRepositories(query *models.RepositoryQuery) ([]*repoResp, error) {

@@ -1011,7 +1011,6 @@ paths:
           description: The auth mode of the system is not "oidc_auth", or the user is not onboarded via OIDC AuthN.
         '500':
           description: Unexpected internal errors.
-
   /repositories:
     get:
       summary: Get repositories accompany with relevant project and repo name.
@@ -1022,7 +1021,7 @@ paths:
           in: query
           type: integer
           format: int32
-          required: true
+          required: false
           description: Relevant project ID.
         - name: q
           in: query

@@ -124,7 +124,7 @@ func (ra *RepositoryAPI) Get() {
 		}
 		projectIds = append(projectIds, projectID)
 	} else {
-		projects, err := ra.getMyProjects()
+		projects, err := ra.getAccessibleProjects()
 		if err != nil {
 			return
 		}
@@ -164,7 +164,7 @@ func (ra *RepositoryAPI) Get() {
 	ra.ServeJSON()
 }
 
-func (ra *RepositoryAPI) getMyProjects() ([]*models.Project, error) {
+func (ra *RepositoryAPI) getAccessibleProjects() ([]*models.Project, error) {
 	isAuthenticated := ra.SecurityCtx.IsAuthenticated()
 	isSysAdmin := ra.SecurityCtx.IsSysAdmin()
 

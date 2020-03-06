@@ -977,6 +977,91 @@ func (ra *RepositoryAPI) GetTopRepos() {
 	ra.ServeJSON()
 }
 
+func (ra *RepositoryAPI) SearchRepos() {
+	keyword := ra.GetString("q")
+	isAuthenticated := ra.SecurityCtx.IsAuthenticated()
+	isSysAdmin := ra.SecurityCtx.IsSysAdmin()
+
+	var projects []*models.Project
+	var err error
+
+	if isSysAdmin {
+		result, err := ra.ProjectMgr.List(nil)
+		if err != nil {
+			ra.ParseAndHandleError("failed to get projects", err)
+			return
+		}
+		projects = result.Projects
+	} else {
+		projects, err = ra.ProjectMgr.GetPublic()
+		if err != nil {
+			ra.ParseAndHandleError("failed to get projects", err)
+			return
+		}
+		if isAuthenticated {
+			mys, err := ra.SecurityCtx.GetMyProjects()
+			if err != nil {
+				ra.SendInternalServerError(fmt.Errorf(
+					"failed to get projects: %v", err))
+				return
+			}
+			exist := map[int64]bool{}
+			for _, p := range projects {
+				exist[p.ProjectID] = true
+			}
+
+			for _, p := range mys {
+				if !exist[p.ProjectID] {
+					projects = append(projects, p)
+				}
+			}
+		}
+	}
+
+	repositoryResult, err := filterWholeRepositories(projects, keyword)
+	if err != nil {
+		log.Errorf("failed to filter repositories: %v", err)
+		ra.SendInternalServerError(fmt.Errorf("failed to filter repositories: %v", err))
+		return
+	}
+
+	ra.Data["json"] = assembleReposInParallel(repositoryResult)
+	ra.ServeJSON()
+}
+
+func filterWholeRepositories(projects []*models.Project, keyword string) (
+	[]*models.RepoRecord, error) {
+	result := []*models.RepoRecord{}
+	if len(projects) == 0 {
+		return result, nil
+	}
+
+	repositories, err := dao.GetRepositories(&models.RepositoryQuery{
+		Name: keyword,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(repositories) == 0 {
+		return result, nil
+	}
+
+	projectMap := map[string]*models.Project{}
+	for _, project := range projects {
+		projectMap[project.Name] = project
+	}
+
+	for _, repository := range repositories {
+		projectName, _ := utils.ParseRepository(repository.Name)
+		_, exist := projectMap[projectName]
+		if !exist {
+			continue
+		}
+		result = append(result, repository)
+	}
+	return result, nil
+}
+
 // Put updates description info for the repository
 func (ra *RepositoryAPI) Put() {
 	name := ra.GetString(":splat")

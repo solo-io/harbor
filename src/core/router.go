@@ -90,6 +90,7 @@ func initRouters() {
 	beego.Router("/api/repositories/*/tags/:tag/manifest", &api.RepositoryAPI{}, "get:GetManifests")
 	beego.Router("/api/repositories/*/signatures", &api.RepositoryAPI{}, "get:GetSignatures")
 	beego.Router("/api/repositories/top", &api.RepositoryAPI{}, "get:GetTopRepos")
+	beego.Router("/api/repositories/search", &api.RepositoryAPI{}, "get:SearchRepos")
 
 	beego.Router("/api/system/gc", &api.GCAPI{}, "get:List")
 	beego.Router("/api/system/gc/:id", &api.GCAPI{}, "get:GetGC")

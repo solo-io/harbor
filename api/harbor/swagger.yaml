@@ -1505,6 +1505,28 @@ paths:
           description: Bad request because of invalid count.
         '500':
           description: Unexpected internal errors.
+  /repositories/search:
+    get:
+      summary: Search repos that belong to projects the user has access to.
+      description: |
+        This endpoint allows users to retrieve full repository models for repos that match the given search params.
+      parameters:
+        - name: q
+          in: query
+          description: Search parameter for repository name.
+          required: true
+          type: string
+      tags:
+        - Products
+      responses:
+        '200':
+          description: An array of search results
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Repository'
+        '500':
+          description: Unexpected internal errors.
   /logs:
     get:
       summary: Get recent logs of the projects which the user is a member of
